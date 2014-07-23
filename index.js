@@ -71,5 +71,3 @@ else
     console.log("Error");
     console.log("1 or more Arguments was not valid");
 }
-
-
