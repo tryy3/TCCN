@@ -6,63 +6,57 @@ var http        = require('http');
 var fs          = require('fs');
 var csv         = require('csv');
 var buf         = require('buffer');
+var numeral     = require('numeral');
 
-var yahoo = "http://finance.yahoo.com/webservice/v1/symbols/allcurrencies/quote";
-var currencyArray = new Array();
-var args = new Array();
+//Change this setting!
+var appid = "Your_APP_ID";
 
-function start(arg1, arg2, arg3)
+
+
+var currencyWebsite = "http://openexchangerates.org/api/";
+var currencyList = currencyWebsite + "currencies.json";
+var currencyExchange = currencyWebsite + "latest.json?app_id=" + appid;
+var currentCurrencyList; 
+var currentExchange;
+var currencyArray;
+var arg1;
+var arg2;
+var arg3;
+
+function trimer(arg, message)
 {
-
-    var link = "http://download.finance.yahoo.com/d/quotes.csv?s=" + arg1 + arg2 + "=X&f=l1";
-    var request = http.get(link, function(response)
+    if (arg == 'space')
     {
-        var parser = csv.parse({delimiter: ';'}, function(err, data)
-        {
-            if (arg3 == 0)
-            {
-                var p = 1;
-                var s = "          ";
-                for (var i = 0; i < 10; i++)
-                {
-                    msg = arg1 + " " + (p * (Math.pow(10, i))) + s + "=> " + (Math.max(Math.round((data * (p * (Math.pow(10, i)))) + "e+2") + "e-2")) + " " + arg2;
-                    console.log(msg.green);
-                    s = s.replace(/\s{1}$/gm, '');
-                }
+        return message.replace(/^\s+|\s+$/g, '');
+    }
+    else if (arg == 'fspace')
+    {
+        return message.replace(/^\s+/, '');
+    }
+    else if (arg == 'lspace')
+    {
+        return message.replace(/\s+$/, '');
+    }
 
-                process.exit();
-            }
-            var msg = arg3 + " " + arg1 + " => " +  (Math.max(Math.round((data * arg3) + "e+2")  + "e-2")) + " " + arg2;
-            console.log(msg.green);
-            process.exit();
-        });
-
-        response.pipe(parser);
-    });
+    else if (arg == 'full')
+    {
+        return message.replace(/^[, . : ; \n \s]+|[, . : ; \n \s]+$/g, '');
+    }
+    else
+    {
+        exit('Can\'t trim that method, ' + arg);
+    }
 }
 
-function list(arg1, arg2, arg3)
+function list()
 {
-    request(yahoo, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-            parseString(body, function (err, result) {
-                var jsonResult = JSON.stringify(result);
-                var jsonEnd = JSON.parse(jsonResult);
-                var start = 0
-                var end = jsonEnd.list.resources[0].resource.length
-                for (var i = start; i < end; i++)
-                {
-                    var currency    = jsonEnd.list.resources[0].resource[i].field[0]._;
-                    var realC       = currency.replace("USD/", "");
-                    if (realC.length == 3)
-                    {
-                        currencyArray[i] = realC;
-                    }
-
-                } 
-            });
+    request(currencyList, function (error, response, body)
+    {
+        if (!error && response.statusCode == 200)
+        {
+            currencyArray = JSON.parse(body);
         }
-    })
+    });
 }
 
 function checkVar(arg, type)
@@ -94,6 +88,18 @@ function checkVar(arg, type)
     }
 }
 
+function base(arg)
+{
+    request(currencyExchange + "&base=" + arg, function(error, response, body)
+    {
+        if (!error && response.statusCode == 200)
+        {
+            currentCurrencyList = JSON.parse(body);
+        }
+    })
+
+}
+
 function exit(message)
 {
     console.log("Error".red);
@@ -101,48 +107,111 @@ function exit(message)
     process.exit();
 }
 
-var i = 0;
+function convert(cur1, cur2, amount)
+{
+    cur1 = currentCurrencyList.rates[cur1];
+    cur2 = currentCurrencyList.rates[cur2];
+
+    var a1 = cur2 * amount;
+    var a2 = a1 / cur1;
+
+    return Math.abs(Math.round(a2 + "e+2") + "e-2");
+
+}
+
+var count = 0;
 
 function read()
 {
-    if (i == 0)
+    if (count == 0)
+    {
+        console.log("List all the currencies? y/N".yellow);
+    }
+    else if (count == 1)
     {
         console.log("Please type the currency you want to convert from".yellow);
     }
-    else if (i == 1)
+    else if (count == 2)
     {
         console.log("Please type the currency you want to convert to".yellow);
     }
-    else if (i == 2)
+    else if (count == 3)
     {
         console.log("Please type how much you want to convert".yellow);
-    }
-    else
-    {
-        start(args[0], args[1], args[2]);
     }
 }
 
 process.stdin.on('data', function (text) 
 {
     console.log("");
-    if (i < 3)
+    if (count < 4)
     {
         if (typeof(util.inspect(text)) !== 'undefined')
         {
-            if (i < 2)
+            if (count == 0)
             {
-                args[i] = checkVar(text.toString(), 'string').trim();
-                if (currencyArray.indexOf(args[i]) < 0)
+                var list = checkVar(text.toString(), 'string').trim();
+
+                if (list.toUpperCase() == "Y" || list.toUpperCase() == "YE" || list.toUpperCase() == "YES")
                 {
-                    exit(args[i] + " is not a supported currency");
+                    var p = 0;
+                    var message = "";
+                    for (var key in currencyArray)
+                    {
+                        if (p < 5)
+                        {
+                            message = message.concat(key + ", ");
+                            p++;
+                        }
+                        else
+                        {
+                            console.log(trimer('full', message).yellow);
+                            p = 0;
+                            message = "";
+                        }
+                    }
                 }
+            }
+            else if (count == 1)
+            {
+                arg1 = checkVar(text.toString(), 'string').trim();
+
+                if (typeof currencyArray[arg1] == 'undefined')
+                {
+                    exit(arg1 + " is not a supported currency");
+                }
+
+                base("USD");
+            }
+            else if (count == 2)
+            {
+                arg2 = checkVar(text.toString(), 'string').trim();
+
+                currentExchange = currentCurrencyList.rates[arg2];
             }
             else
             {
-                args[i] = checkVar(text.toString(), 'int');
+                arg3 = checkVar(text.toString(), 'int');
+
+                if (arg3 == 0)
+                {
+                    var p = 1;
+                    var s = "          ";
+                    for (var i = 0; i < 10; i++)
+                    {
+                        msg = arg1 + " " + (p * (Math.pow(10, i))) + s + "=> " + convert(arg1, arg2, p) + " " + arg2;
+                        console.log(msg.green);
+                        s = s.replace(/\s{1}$/gm, '');
+                    }
+
+                    process.exit();
+                }
+
+                var msg = arg3 + " " + arg1 + " => " +  numeral(convert(arg1, arg2, arg3)).format('0,0.00') + " " + arg2;
+                console.log(msg.green);
+                process.exit();
             }
-            i++;
+            count++;
             read();
         }
     }
