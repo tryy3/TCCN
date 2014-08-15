@@ -1,17 +1,18 @@
-var parseString = require('xml2js').parseString;
 var request     = require('request');
 var util        = require('util');
 var color       = require('colors');
 var http        = require('http');
 var fs          = require('fs');
-var csv         = require('csv');
 var buf         = require('buffer');
 var numeral     = require('numeral');
 
 //Change this setting!
-var appid = "Your_APP_ID";
+var appid = "c2180f1420804949ade783320809ba98";
 
 
+
+var symbolFile = "symbols.json";
+var symbols;
 
 var currencyWebsite = "http://openexchangerates.org/api/";
 var currencyList = currencyWebsite + "currencies.json";
@@ -19,6 +20,7 @@ var currencyExchange = currencyWebsite + "latest.json?app_id=" + appid;
 var currentCurrencyList; 
 var currentExchange;
 var currencyArray;
+
 var arg1;
 var arg2;
 var arg3;
@@ -107,6 +109,42 @@ function exit(message)
     process.exit();
 }
 
+function getSymbolList()
+{
+    var read = fs.readFile(symbolFile, 'utf8', function(e, data)
+    {
+        if (e)
+        {
+            if (e.errno == 3)
+            {
+                console.log("ERROR".red);
+                console.log("You need read and write permission, please contact your administrator.".red);
+                process.exit();
+            }
+            else
+            {
+                console.log("ERROR".red);
+                console.log(e.red);
+                process.exit();
+            }
+        }
+
+        symbols = JSON.parse(data);
+    });
+}
+
+function getSymbol(currency)
+{
+    if (symbols[currency])
+    {
+        return symbols[currency].Code + " (" + currency + ")";
+    }
+    else
+    {
+        return currency;
+    }
+}
+
 function convert(cur1, cur2, amount)
 {
     cur1 = currentCurrencyList.rates[cur1];
@@ -125,10 +163,12 @@ function read()
 {
     if (count == 0)
     {
+        getSymbolList();
         console.log("List all the currencies? y/N".yellow);
     }
     else if (count == 1)
     {
+        console.log();
         console.log("Please type the currency you want to convert from".yellow);
     }
     else if (count == 2)
@@ -207,7 +247,7 @@ process.stdin.on('data', function (text)
                     process.exit();
                 }
 
-                var msg = arg3 + " " + arg1 + " => " +  numeral(convert(arg1, arg2, arg3)).format('0,0.00') + " " + arg2;
+                var msg = arg3 + getSymbol(arg1) + " => " + numeral(convert(arg1, arg2, arg3)).format('0,0.00') + getSymbol(arg2);
                 console.log(msg.green);
                 process.exit();
             }
