@@ -1,6 +1,5 @@
 var request     = require('request');
 var fs          = require('fs');
-var color       = require('colors');
 var http        = require('http');
 var util        = require('util');
 
@@ -12,6 +11,25 @@ var modules = [
     'colors',
     'numeral'
 ];
+
+function getColor(message, color)
+{
+    if (colorBol)
+    {
+        if (color == "red")
+        {
+            return message.red;
+        }
+        else if (color == "green")
+        {
+            return message.green;
+        }
+    }
+    else
+    {
+        return message;
+    }
+}
 
 var isModuleAvailableSync = function(moduleName)
 {
@@ -30,19 +48,22 @@ var isModuleAvailableSync = function(moduleName)
     return ret;
 }
 
+var colorBol = isModuleAvailableSync('colors');
+var color = colorBol ? require('colors') : null;
+
 function error (moduleError)
 {
     var message = "Module " + moduleError + " is not installed, please install it by running npm install " + moduleError;
-    console.log("Error".red);
-    console.log(message.red);
+    console.log(getColor("Error","red"));
+    console.log(getColor(message, "red"));
     console.log("");
 }
 
 function success (moduleSuccess)
 {
     var message = "Module " + moduleSuccess + " is installed";
-    console.log("Success".green);
-    console.log(message.green);
+    console.log(getColor("Success", "green"));
+    console.log(getColor(message, "green"));
     console.log("");
 }
 
@@ -86,19 +107,19 @@ function downloadSymbol()
                 {
                     if (e.errno == 3)
                     {
-                        console.log("ERROR".red);
-                        console.log("You need read and write permission, please contact your administrator.".red);
+                        console.log(getColor("ERROR", "red"));
+                        console.log(getColor("You need read and write permission, please contact your administrator.", "red"));
                     }
                     else
                     {
-                        console.log("ERROR".red);
-                        console.log(e.red);
+                        console.log(getColor("ERROR", "red"));
+                        console.log(getColor(e, "red"));
                     }
                 }
                 else
                 {
-                    console.log("SUCCESS".green);
-                    console.log(symbolFile.green + " has been created.".green);
+                    console.log(getColor("SUCCESS", "green"));
+                    console.log(getColor(symbolFile, "green" )+ getColor(" has been created.", "green"));
                 }
             })
         }
