@@ -7,7 +7,7 @@ var buf         = require('buffer');
 var numeral     = require('numeral');
 
 //Change this setting!
-var appid = "c2180f1420804949ade783320809ba98";
+var appid = "APP_ID";
 
 
 
